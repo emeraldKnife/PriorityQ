@@ -5,29 +5,8 @@ import {
   Pill, FileText, AlertTriangle, Stethoscope, User, Clock,
   ChevronRight, RefreshCw, Activity
 } from 'lucide-react';
-import { getPatientById, generateNotes, completeConsultation } from '../services/api';
+import { getPatientById, generateNotes, completeConsultation, transcribeAudio } from '../services/api';
 
-const SAMPLE_DIALOGUES = [
-  `Doctor: Good morning. What brings you in today?
-Patient: Doctor, I've had this terrible headache for the past three days. It's pounding and mostly on the right side.
-Doctor: Any fever? Nausea?
-Patient: Yes, mild fever around 99°F. And I feel nauseous sometimes, especially in the morning.
-Doctor: Any vision changes? Neck stiffness?
-Patient: No, nothing like that. I've also had a runny nose and sore throat since last week.
-Doctor: Okay. It sounds like a viral infection with tension headache. I'll prescribe some medication for the pain and fever. Rest well and drink plenty of fluids.`,
-
-  `Doctor: Hello. Please describe your symptoms.
-Patient: I've had severe chest pain for about 30 minutes. It's crushing and radiates to my left arm.
-Doctor: Any shortness of breath or sweating?
-Patient: Yes, both. I'm feeling very anxious too.
-Doctor: We need to do an ECG immediately. Blood pressure is 160/100. This could be cardiac. I'm ordering an emergency workup.`,
-
-  `Doctor: Hi there. What seems to be the problem?
-Patient: My stomach has been hurting since yesterday, around the belly button area. Now it's moved to the lower right side.
-Doctor: Any vomiting or fever?
-Patient: Yes, I vomited twice and I have a fever of 101°F. The pain gets worse when I move.
-Doctor: This presentation is concerning for appendicitis. I'm referring you for an urgent surgical consult and ordering a CBC and CT abdomen.`,
-];
 
 function SOAPSection({ label, content, color }) {
   return (
@@ -103,10 +82,6 @@ export default function ConsultationRoom() {
   const [notesGenerated, setNotesGenerated] = useState(false);
   const textareaRef = useRef(null);
 
-  // Web Speech API
-  const [isRecording, setIsRecording] = useState(false);
-  const recognitionRef = useRef(null);
-
   useEffect(() => {
     getPatientById(id)
       .then(data => {
@@ -121,43 +96,61 @@ export default function ConsultationRoom() {
       });
   }, [id]);
 
-  // Speech recognition setup
-  useEffect(() => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
+  // MediaRecorder-based recording (sends to Gemini via backend)
+  const [isRecording, setIsRecording]       = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [sttError, setSttError]             = useState('');
+  const mediaRecorderRef = useRef(null);
+  const chunksRef        = useRef([]);
 
-    const recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = 'en-US';
-
-    let finalTranscript = '';
-    recognition.onresult = (event) => {
-      let interim = '';
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript + ' ';
-        else interim += event.results[i][0].transcript;
-      }
-      setDialogue(prev => finalTranscript || prev);
-    };
-
-    recognition.onend = () => setIsRecording(false);
-    recognitionRef.current = recognition;
-
-    return () => recognition.abort();
-  }, []);
-
-  const toggleRecording = () => {
-    if (!recognitionRef.current) {
-      alert('Speech recognition is not supported in this browser. Please use Chrome.');
+  const toggleRecording = async () => {
+    setSttError('');
+    if (isRecording) {
+      mediaRecorderRef.current?.stop();
+      setIsRecording(false);
       return;
     }
-    if (isRecording) {
-      recognitionRef.current.stop();
-      setIsRecording(false);
-    } else {
-      recognitionRef.current.start();
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      chunksRef.current = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+
+      recorder.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        const reader = new FileReader();
+        reader.onload = async () => {
+          const base64 = reader.result.split(',')[1];
+          setIsTranscribing(true);
+          try {
+            const { transcript } = await transcribeAudio(base64, 'audio/webm');
+            if (transcript) {
+              setDialogue((prev) =>
+                prev ? prev.trimEnd() + '\n' + transcript : transcript
+              );
+            }
+          } catch (err) {
+            setSttError(err?.response?.data?.error || 'Transcription failed. Please try again.');
+          } finally {
+            setIsTranscribing(false);
+          }
+        };
+        reader.readAsDataURL(blob);
+      };
+
+      mediaRecorderRef.current = recorder;
+      recorder.start();
       setIsRecording(true);
+    } catch (err) {
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setSttError('Microphone access denied. Click the 🔒 icon in the address bar, allow microphone, then try again.');
+      } else {
+        setSttError(`Could not access microphone: ${err.message}`);
+      }
     }
   };
 
@@ -262,8 +255,8 @@ export default function ConsultationRoom() {
         </div>
         <div>
           <p style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Severity</p>
-          <p style={{ fontSize: '0.9rem', fontWeight: 700, color: patient?.severityScore >= 7 ? '#ef4444' : patient?.severityScore >= 5 ? '#eab308' : '#22c55e', marginTop: '2px', fontFamily: '"JetBrains Mono", monospace' }}>
-            {patient?.severityScore}/10
+          <p style={{ fontSize: '0.9rem', fontWeight: 700, color: patient?.severityScore >= 70 ? '#ef4444' : patient?.severityScore >= 50 ? '#eab308' : '#22c55e', marginTop: '2px', fontFamily: '"JetBrains Mono", monospace' }}>
+            {patient?.severityScore}/100
           </p>
         </div>
         <div>
@@ -295,19 +288,28 @@ export default function ConsultationRoom() {
                 onClick={toggleRecording}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '6px',
-                  padding: '6px 12px', borderRadius: '20px', cursor: 'pointer',
-                  border: isRecording ? '1px solid rgba(239,68,68,0.4)' : '1px solid var(--border)',
-                  background: isRecording ? 'rgba(239,68,68,0.12)' : 'rgba(255,255,255,0.04)',
-                  color: isRecording ? '#fca5a5' : 'var(--text-secondary)',
-                  fontSize: '0.75rem', fontWeight: 600, transition: 'all 0.2s'
+                  padding: '6px 12px', borderRadius: '20px',
+                  cursor: isTranscribing ? 'default' : 'pointer',
+                  border: isRecording
+                    ? '1px solid rgba(239,68,68,0.4)'
+                    : isTranscribing
+                    ? '1px solid rgba(251,191,36,0.4)'
+                    : '1px solid var(--border)',
+                  background: isRecording
+                    ? 'rgba(239,68,68,0.12)'
+                    : isTranscribing
+                    ? 'rgba(251,191,36,0.1)'
+                    : 'rgba(255,255,255,0.04)',
+                  color: isRecording ? '#fca5a5' : isTranscribing ? '#fbbf24' : 'var(--text-secondary)',
+                  fontSize: '0.75rem', fontWeight: 600, transition: 'all 0.2s', opacity: isTranscribing ? 0.8 : 1
                 }}
               >
-                {isRecording ? <MicOff size={13} /> : <Mic size={13} />}
-                {isRecording ? 'Stop Recording' : 'Use Microphone'}
-                {isRecording && <span style={{
-                  width: '6px', height: '6px', borderRadius: '50%', background: '#ef4444',
-                  animation: 'pulse 1s infinite'
-                }} />}
+                {isTranscribing
+                  ? <><Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> Transcribing…</>
+                  : isRecording
+                  ? <><MicOff size={13} /> Stop Recording <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#ef4444', animation: 'pulse 1s infinite', display: 'inline-block' }} /></>
+                  : <><Mic size={13} /> Use Microphone</>
+                }
               </button>
             </div>
 
@@ -321,28 +323,34 @@ export default function ConsultationRoom() {
               style={{ resize: 'none', lineHeight: 1.7, fontSize: '0.85rem' }}
             />
 
-            {/* Sample Dialogues */}
-            <div style={{ marginTop: '12px' }}>
-              <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Load sample dialogue:
-              </p>
-              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                {['Viral URTI', 'Cardiac Emergency', 'Appendicitis'].map((label, i) => (
-                  <button key={i}
-                    onClick={() => setDialogue(SAMPLE_DIALOGUES[i])}
-                    style={{
-                      fontSize: '0.72rem', padding: '4px 10px', borderRadius: '6px', cursor: 'pointer',
-                      border: '1px solid var(--border)', background: 'rgba(255,255,255,0.04)',
-                      color: 'var(--text-secondary)', transition: 'all 0.15s'
-                    }}
-                    onMouseEnter={e => e.target.style.borderColor = 'rgba(99,155,255,0.3)'}
-                    onMouseLeave={e => e.target.style.borderColor = 'var(--border)'}
-                  >
-                    {label}
-                  </button>
-                ))}
+            {/* Recording / transcribing status */}
+            {(isRecording || isTranscribing) && (
+              <div style={{
+                marginTop: '8px', padding: '8px 12px', borderRadius: '6px',
+                background: isTranscribing ? 'rgba(251,191,36,0.08)' : 'rgba(239,68,68,0.06)',
+                border: `1px solid ${isTranscribing ? 'rgba(251,191,36,0.25)' : 'rgba(239,68,68,0.2)'}`,
+                fontSize: '0.8rem', color: isTranscribing ? '#fbbf24' : '#fca5a5', lineHeight: 1.5,
+                display: 'flex', alignItems: 'center', gap: '8px'
+              }}>
+                {isTranscribing
+                  ? <><Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> Transcribing audio with Gemini AI…</>
+                  : <><span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#ef4444', animation: 'pulse 1s infinite', display: 'inline-block', flexShrink: 0 }} /> 🎙️ Recording… click Stop when done.</>
+                }
               </div>
-            </div>
+            )}
+
+            {/* STT error message */}
+            {sttError && (
+              <div style={{
+                marginTop: '8px', padding: '8px 12px', borderRadius: '6px',
+                background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
+                fontSize: '0.78rem', color: '#fca5a5', lineHeight: 1.5,
+                display: 'flex', alignItems: 'flex-start', gap: '8px'
+              }}>
+                <AlertTriangle size={13} style={{ flexShrink: 0, marginTop: '2px' }} />
+                {sttError}
+              </div>
+            )}
 
             {error && (
               <div style={{

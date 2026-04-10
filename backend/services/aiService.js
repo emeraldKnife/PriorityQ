@@ -1,36 +1,26 @@
 require('dotenv').config();
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const OPENAI_BASE_URL = process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1';
-const MODEL = process.env.AI_MODEL || 'gpt-4o-mini';
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const MODEL = process.env.AI_MODEL || 'gemini-2.0-flash';
+
+const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
 
 /**
  * Core helper: sends a prompt to the LLM and returns the raw text response.
  */
 async function callLLM(systemPrompt, userContent) {
-  const response = await fetch(`${OPENAI_BASE_URL}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${OPENAI_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userContent },
-      ],
-      temperature: 0.2,
-    }),
+  if (!genAI) {
+    throw new Error('Gemini API key not configured.');
+  }
+  const model = genAI.getGenerativeModel({
+    model: MODEL,
+    systemInstruction: systemPrompt,
+    generationConfig: { temperature: 0.2 },
   });
 
-  if (!response.ok) {
-    const errBody = await response.text();
-    throw new Error(`LLM API error ${response.status}: ${errBody}`);
-  }
-
-  const data = await response.json();
-  return data.choices[0].message.content.trim();
+  const result = await model.generateContent(userContent);
+  return result.response.text().trim();
 }
 
 /**
@@ -48,18 +38,18 @@ function safeParseJSON(text) {
 // ─────────────────────────────────────────────────────────────────
 // TRIAGE AI
 // Input: raw symptom text
-// Output: { severity_score: int (1-10), predicted_consult_time_mins: int }
+// Output: { severity_score: int (1-100), predicted_consult_time_mins: int }
 // ─────────────────────────────────────────────────────────────────
 async function triagePatient(symptoms) {
   // DEMO MODE: If no API key, return a deterministic mock based on keyword matching
-  if (!OPENAI_API_KEY || OPENAI_API_KEY === 'your_openai_api_key_here') {
+  if (!GEMINI_API_KEY || GEMINI_API_KEY === 'your_gemini_api_key_here') {
     return getMockTriageResult(symptoms);
   }
 
   const systemPrompt = `You are a medical triage AI assistant working in an OPD (Outpatient Department).
 Analyze the patient's symptoms and return ONLY a raw JSON object — no explanations, no markdown.
 The JSON must have exactly two keys:
-- "severity_score": an integer from 1 to 10 (1 = very mild, 10 = life-threatening emergency)
+- "severity_score": an integer from 1 to 100 (1 = very mild, 100 = life-threatening emergency)
 - "predicted_consult_time_mins": an integer (estimated consultation time in minutes)`;
 
   const userContent = `Patient symptoms: ${symptoms}`;
@@ -70,23 +60,23 @@ The JSON must have exactly two keys:
 
 function getMockTriageResult(symptoms) {
   const lower = symptoms.toLowerCase();
-  let severity = 3;
+  let severity = 30;
   let time = 10;
 
   if (/chest pain|heart attack|stroke|unconscious|seizure|severe bleed/i.test(lower)) {
-    severity = 9; time = 30;
+    severity = 90; time = 30;
   } else if (/breathing|difficulty breath|shortness|fracture|broken bone|high fever/i.test(lower)) {
-    severity = 7; time = 20;
+    severity = 70; time = 20;
   } else if (/fever|vomit|diarrhea|abdominal pain|headache|infection/i.test(lower)) {
-    severity = 5; time = 15;
+    severity = 50; time = 15;
   } else if (/cold|cough|sore throat|mild pain|rash|allergy/i.test(lower)) {
-    severity = 3; time = 10;
+    severity = 30; time = 10;
   } else if (/checkup|routine|prescription refill|follow.?up/i.test(lower)) {
-    severity = 2; time = 8;
+    severity = 15; time = 8;
   }
 
   // Add slight randomness for demo purposes
-  severity = Math.min(10, Math.max(1, severity + Math.floor(Math.random() * 2 - 1)));
+  severity = Math.min(100, Math.max(1, severity + Math.floor(Math.random() * 10 - 5)));
   return { severity_score: severity, predicted_consult_time_mins: time };
 }
 
@@ -96,7 +86,7 @@ function getMockTriageResult(symptoms) {
 // Output: { symptoms, diagnosis, prescription: [{medication, dosage, frequency, duration}], advice }
 // ─────────────────────────────────────────────────────────────────
 async function generateClinicalNotes(dialogue) {
-  if (!OPENAI_API_KEY || OPENAI_API_KEY === 'your_openai_api_key_here') {
+  if (!GEMINI_API_KEY || GEMINI_API_KEY === 'your_gemini_api_key_here') {
     return getMockClinicalNotes(dialogue);
   }
 
@@ -131,4 +121,26 @@ function getMockClinicalNotes(dialogue) {
   };
 }
 
-module.exports = { triagePatient, generateClinicalNotes };
+// ─────────────────────────────────────────────────────────────────
+// AUDIO TRANSCRIPTION
+// Input: base64-encoded audio, mimeType (e.g. 'audio/webm')
+// Output: plain transcript string
+// ─────────────────────────────────────────────────────────────────
+async function transcribeAudio(audioBase64, mimeType) {
+  if (!genAI) {
+    throw new Error('Gemini API key not configured. Cannot transcribe audio.');
+  }
+
+  const model = genAI.getGenerativeModel({ model: MODEL });
+
+  const result = await model.generateContent([
+    {
+      inlineData: { data: audioBase64, mimeType: mimeType || 'audio/webm' },
+    },
+    'Transcribe this audio recording exactly as spoken. Return only the raw transcript text — no labels, headings, punctuation corrections, or formatting. Preserve the exact words.',
+  ]);
+
+  return result.response.text().trim();
+}
+
+module.exports = { triagePatient, generateClinicalNotes, transcribeAudio };

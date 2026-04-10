@@ -1,35 +1,94 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
-  User, FileText, Clock, AlertTriangle, CheckCircle,
+  User, Clock, AlertTriangle, CheckCircle, Mic, MicOff, Loader2 as MicLoader,
   Loader2, ChevronRight, Activity, Thermometer
 } from 'lucide-react';
-import { checkInPatient } from '../services/api';
+import { checkInPatient, transcribeAudio } from '../services/api';
 
 const SEVERITY_META = [
-  { min: 1, max: 2, label: 'Minimal', color: '#22c55e', bg: 'rgba(34,197,94,0.1)' },
-  { min: 3, max: 4, label: 'Low',     color: '#84cc16', bg: 'rgba(132,204,22,0.1)' },
-  { min: 5, max: 6, label: 'Moderate',color: '#eab308', bg: 'rgba(234,179,8,0.1)' },
-  { min: 7, max: 8, label: 'High',    color: '#f97316', bg: 'rgba(249,115,22,0.1)' },
-  { min: 9, max: 10,label: 'Critical',color: '#ef4444', bg: 'rgba(239,68,68,0.1)'  },
+  { min: 1,  max: 20,  label: 'Minimal',  color: '#22c55e', bg: 'rgba(34,197,94,0.1)' },
+  { min: 21, max: 40,  label: 'Low',      color: '#84cc16', bg: 'rgba(132,204,22,0.1)' },
+  { min: 41, max: 60,  label: 'Moderate', color: '#eab308', bg: 'rgba(234,179,8,0.1)' },
+  { min: 61, max: 80,  label: 'High',     color: '#f97316', bg: 'rgba(249,115,22,0.1)' },
+  { min: 81, max: 100, label: 'Critical', color: '#ef4444', bg: 'rgba(239,68,68,0.1)'  },
 ];
 
 function getSeverityMeta(score) {
   return SEVERITY_META.find(m => score >= m.min && score <= m.max) || SEVERITY_META[0];
 }
 
-const SAMPLE_SYMPTOMS = [
-  'Severe chest pain radiating to left arm for 20 minutes',
-  'High fever 103°F, severe headache, neck stiffness',
-  'Persistent cough, shortness of breath, mild fever',
-  'Stomach pain, nausea, vomiting since morning',
-  'Mild sore throat, runny nose, routine checkup',
-];
 
 export default function PatientIntake() {
   const [form, setForm] = useState({ patientName: '', age: '', rawSymptoms: '' });
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState(null);
-  const [error, setError] = useState('');
+  const [loading, setLoading]     = useState(false);
+  const [result, setResult]       = useState(null);
+  const [error, setError]         = useState('');
+
+  // MediaRecorder-based recording (sends to Gemini via backend)
+  const [isRecording, setIsRecording]     = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [sttError, setSttError]           = useState('');
+  const mediaRecorderRef = useRef(null);
+  const chunksRef        = useRef([]);
+
+  const toggleRecording = async () => {
+    setSttError('');
+    if (isRecording) {
+      // Stop — triggers onstop which handles transcription
+      mediaRecorderRef.current?.stop();
+      setIsRecording(false);
+      return;
+    }
+
+    // Start
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      chunksRef.current = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+
+      recorder.onstop = async () => {
+        // Stop all mic tracks
+        stream.getTracks().forEach((t) => t.stop());
+
+        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        const reader = new FileReader();
+        reader.onload = async () => {
+          const base64 = reader.result.split(',')[1];
+          setIsTranscribing(true);
+          try {
+            const { transcript } = await transcribeAudio(base64, 'audio/webm');
+            if (transcript) {
+              setForm((prev) => ({
+                ...prev,
+                rawSymptoms: prev.rawSymptoms
+                  ? prev.rawSymptoms.trimEnd() + ' ' + transcript
+                  : transcript,
+              }));
+            }
+          } catch (err) {
+            setSttError(err?.response?.data?.error || 'Transcription failed. Please try again.');
+          } finally {
+            setIsTranscribing(false);
+          }
+        };
+        reader.readAsDataURL(blob);
+      };
+
+      mediaRecorderRef.current = recorder;
+      recorder.start();
+      setIsRecording(true);
+    } catch (err) {
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setSttError('Microphone access denied. Click the 🔒 icon in the address bar, allow microphone, then try again.');
+      } else {
+        setSttError(`Could not access microphone: ${err.message}`);
+      }
+    }
+  };
 
   const handleChange = (e) => {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -137,23 +196,70 @@ export default function PatientIntake() {
 
               {/* Symptoms */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600,
-                  color: 'var(--text-secondary)', marginBottom: '6px', letterSpacing: '0.04em',
-                  textTransform: 'uppercase' }}>
-                  Describe Your Symptoms *
-                </label>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 600,
+                    color: 'var(--text-secondary)', letterSpacing: '0.04em',
+                    textTransform: 'uppercase' }}>
+                    Describe Your Symptoms *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={toggleRecording}
+                    disabled={isTranscribing}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '5px',
+                      padding: '4px 10px', borderRadius: '20px',
+                      cursor: isTranscribing ? 'default' : 'pointer',
+                      border: isRecording
+                        ? '1px solid rgba(239,68,68,0.4)'
+                        : isTranscribing
+                        ? '1px solid rgba(251,191,36,0.4)'
+                        : '1px solid var(--border)',
+                      background: isRecording
+                        ? 'rgba(239,68,68,0.12)'
+                        : isTranscribing
+                        ? 'rgba(251,191,36,0.1)'
+                        : 'rgba(255,255,255,0.04)',
+                      color: isRecording ? '#fca5a5' : isTranscribing ? '#fbbf24' : 'var(--text-secondary)',
+                      fontSize: '0.7rem', fontWeight: 600, transition: 'all 0.2s', opacity: isTranscribing ? 0.8 : 1
+                    }}
+                  >
+                    {isTranscribing
+                      ? <><MicLoader size={11} style={{ animation: 'spin 1s linear infinite' }} /> Transcribing…</>
+                      : isRecording
+                      ? <><MicOff size={11} /> Stop <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#ef4444', animation: 'pulse 1s infinite', display: 'inline-block' }} /></>
+                      : <><Mic size={11} /> Speak</>
+                    }
+                  </button>
+                </div>
                 <textarea
                   className="input-base"
                   name="rawSymptoms"
                   value={form.rawSymptoms}
                   onChange={handleChange}
-                  placeholder="Be as detailed as possible — location, duration, intensity, associated symptoms..."
+                  placeholder="Describe your symptoms in detail — location, duration, severity..."
                   rows={5}
                   style={{ resize: 'vertical', lineHeight: 1.6 }}
                 />
                 <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '6px' }}>
-                  The AI uses this text to determine triage severity. More detail = better assessment.
+                  {isRecording
+                    ? '🎙️ Recording… click Stop when done. Audio will be transcribed by AI.'
+                    : isTranscribing
+                    ? '⏳ Transcribing your audio with Gemini AI…'
+                    : 'Click Speak to describe symptoms by voice. The AI uses this text to determine triage severity.'}
                 </p>
+                {/* STT error message */}
+                {sttError && (
+                  <div style={{
+                    marginTop: '6px', padding: '8px 12px', borderRadius: '6px',
+                    background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
+                    fontSize: '0.78rem', color: '#fca5a5', lineHeight: 1.5,
+                    display: 'flex', alignItems: 'flex-start', gap: '8px'
+                  }}>
+                    <AlertTriangle size={13} style={{ flexShrink: 0, marginTop: '2px' }} />
+                    {sttError}
+                  </div>
+                )}
               </div>
 
               {/* Error */}
@@ -239,7 +345,7 @@ export default function PatientIntake() {
                   }}>
                     {result.severityScore}
                   </span>
-                  <span style={{ color: 'var(--text-muted)', fontSize: '1rem' }}>/10</span>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '1rem' }}>/100</span>
                 </div>
 
                 {/* Bar */}
@@ -248,7 +354,7 @@ export default function PatientIntake() {
                   borderRadius: '3px', marginTop: '10px', overflow: 'hidden'
                 }}>
                   <div style={{
-                    height: '100%', width: `${result.severityScore * 10}%`,
+                    height: '100%', width: `${result.severityScore}%`,
                     background: meta.color, borderRadius: '3px',
                     transition: 'width 0.8s ease'
                   }} />
@@ -286,7 +392,7 @@ export default function PatientIntake() {
                 </span>
               </div>
               <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: '16px' }}>
-                After submitting, the AI instantly analyses your symptoms and assigns a severity score from 1–10.
+                After submitting, the AI instantly analyses your symptoms and assigns a severity score from 1–100.
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 {SEVERITY_META.map(m => (
@@ -300,34 +406,6 @@ export default function PatientIntake() {
               </div>
             </div>
           )}
-
-          {/* Sample Symptoms */}
-          <div className="glass-card p-5">
-            <div className="flex items-center gap-2 mb-3">
-              <FileText size={14} style={{ color: 'var(--text-muted)' }} />
-              <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                Try a Sample
-              </span>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              {SAMPLE_SYMPTOMS.map((s, i) => (
-                <button
-                  key={i}
-                  onClick={() => setForm(prev => ({ ...prev, rawSymptoms: s }))}
-                  style={{
-                    background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)',
-                    borderRadius: '6px', padding: '7px 10px', textAlign: 'left', cursor: 'pointer',
-                    color: 'var(--text-secondary)', fontSize: '0.75rem', lineHeight: 1.4,
-                    transition: 'all 0.15s'
-                  }}
-                  onMouseEnter={e => { e.target.style.borderColor = 'rgba(99,155,255,0.28)'; e.target.style.color = 'var(--text-primary)'; }}
-                  onMouseLeave={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.color = 'var(--text-secondary)'; }}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
     </div>

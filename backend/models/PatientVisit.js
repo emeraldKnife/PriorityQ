@@ -31,7 +31,7 @@ const patientVisitSchema = new mongoose.Schema(
     severityScore: {
       type: Number,
       min: 1,
-      max: 10,
+      max: 100,
       default: 1,
     },
     predictedConsultTimeMins: {
@@ -77,10 +77,11 @@ patientVisitSchema.virtual('minutesWaiting').get(function () {
 });
 
 // Virtual field: priorityScore (not stored, computed dynamically)
-// Formula: PriorityScore = (severityScore * 10) + (minutesWaiting * 0.5)
+// Formula: PriorityScore = (severityScore * 1) + (minutesWaiting * 0.5)
+// severityScore is 1-100; weight of 1 keeps it proportional
 patientVisitSchema.virtual('priorityScore').get(function () {
   const minutesWaiting = Math.floor((Date.now() - this.checkInTime.getTime()) / 60000);
-  return parseFloat(((this.severityScore * 10) + (minutesWaiting * 0.5)).toFixed(2));
+  return parseFloat(((this.severityScore * 1) + (minutesWaiting * 0.5)).toFixed(2));
 });
 
 patientVisitSchema.set('toJSON', { virtuals: true });

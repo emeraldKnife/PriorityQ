@@ -14,10 +14,10 @@ const STATUS_STYLES = {
 };
 
 function severityColor(score) {
-  if (score >= 9) return '#ef4444';
-  if (score >= 7) return '#f97316';
-  if (score >= 5) return '#eab308';
-  if (score >= 3) return '#84cc16';
+  if (score >= 85) return '#ef4444';
+  if (score >= 65) return '#f97316';
+  if (score >= 45) return '#eab308';
+  if (score >= 25) return '#84cc16';
   return '#22c55e';
 }
 
@@ -30,7 +30,7 @@ function SeverityBar({ score }) {
         borderRadius: '2px', overflow: 'hidden', flexShrink: 0
       }}>
         <div style={{
-          height: '100%', width: `${score * 10}%`,
+          height: '100%', width: `${score}%`,
           background: color, borderRadius: '2px', transition: 'width 0.6s ease'
         }} />
       </div>
@@ -159,7 +159,7 @@ function QueueRow({ patient, index, onConsult }) {
           </span>
         </div>
         <p style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-          {patient.severityScore}×10 + {patient.minutesWaiting}×0.5
+          {patient.severityScore} + {patient.minutesWaiting}×0.5
         </p>
       </div>
 
@@ -235,7 +235,7 @@ export default function DoctorDashboard() {
   const avgSeverity   = queue.length
     ? (queue.reduce((s, p) => s + p.severityScore, 0) / queue.length).toFixed(1)
     : '—';
-  const criticalCount = queue.filter(p => p.severityScore >= 8).length;
+  const criticalCount = queue.filter(p => p.severityScore >= 70).length;
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -258,7 +258,7 @@ export default function DoctorDashboard() {
             Live Priority Queue
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-            Priority Score = (Severity × 10) + (Minutes Waiting × 0.5) — updates every 60s automatically
+            Priority Score = (Severity) + (Minutes Waiting × 0.5) — updates every 60s automatically
           </p>
         </div>
 
@@ -285,7 +285,7 @@ export default function DoctorDashboard() {
         <StatCard icon={Users}       label="Waiting"        value={waiting}        accent="#3b82f6" />
         <StatCard icon={Stethoscope} label="In Consult"     value={inConsultation} accent="#06b6d4" />
         <StatCard icon={Activity}    label="Avg Severity"   value={avgSeverity}    accent="#eab308" />
-        <StatCard icon={AlertCircle} label="Critical (8+)"  value={criticalCount}  accent="#ef4444" />
+        <StatCard icon={AlertCircle} label="Critical (70+)"  value={criticalCount}  accent="#ef4444" />
       </div>
 
       {/* Algorithm Legend */}
@@ -302,10 +302,10 @@ export default function DoctorDashboard() {
           border: '1px solid rgba(251,191,36,0.2)', borderRadius: '6px',
           padding: '4px 12px'
         }}>
-          Priority = (S × 10) + (T × 0.5)
+          Priority = S + (T × 0.5)
         </div>
         <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-          S = Severity (1–10) &nbsp;·&nbsp; T = Minutes Waiting — low-severity patients rise over time
+          S = Severity (1–100) &nbsp;·&nbsp; T = Minutes Waiting — low-severity patients rise over time
         </span>
       </div>
 

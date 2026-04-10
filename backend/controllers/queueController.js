@@ -3,13 +3,12 @@ const PatientVisit = require('../models/PatientVisit');
 /**
  * Core queue algorithm:
  * PriorityScore = (severityScore * Ws) + (minutesWaiting * Wt)
- * Ws = 10, Wt = 0.5
+ * Ws = 1 (severity is 1-100 scale), Wt = 0.5
  *
- * This prevents starvation: even a low-severity patient (score 2)
- * will eventually outrank a high-severity patient (score 8) who has
- * already been seen, because time continuously adds to priority.
+ * This prevents starvation: even a low-severity patient will eventually
+ * outrank a high-severity patient who has been waiting longer.
  */
-const WEIGHT_SEVERITY = 10;
+const WEIGHT_SEVERITY = 1;
 const WEIGHT_TIME = 0.5;
 
 function computePriorityScore(severityScore, checkInTime) {

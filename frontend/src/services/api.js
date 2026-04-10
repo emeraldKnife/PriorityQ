@@ -34,4 +34,9 @@ export const completeConsultation = async (id) => {
   return response.data;
 };
 
+export const transcribeAudio = async (audioBase64, mimeType) => {
+  const response = await api.post('/transcribe', { audio: audioBase64, mimeType });
+  return response.data;
+};
+
 export default api;
