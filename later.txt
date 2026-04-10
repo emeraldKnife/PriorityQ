@@ -2,3 +2,8 @@
 - see the API calls (backend/routes/aiRoutes.js)
 - have good sleep
 - go on a walk
+- add the workflow screenchot in the `README.md` file
+- change the name of the project to PrioirityQ
+- demo data is used, to be removed
+- improve prompts
+- include the speech to text thing completly
