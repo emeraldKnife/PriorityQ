@@ -1,0 +1,4 @@
+- change the 1 to 10 severity_score
+- see the API calls
+- have good sleep
+- go on a walk
