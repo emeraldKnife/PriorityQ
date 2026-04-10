@@ -7,3 +7,5 @@
 - demo data is used, to be removed
 - improve prompts
 - include the speech to text thing completly
+- ⏱️  Queue heartbeat: recalculating priority scores...
+  resolve this error
