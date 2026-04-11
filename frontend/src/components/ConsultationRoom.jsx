@@ -14,8 +14,10 @@ function SOAPSection({ label, content, color }) {
       background: 'rgba(0,0,0,0.2)', border: `1px solid ${color}22`,
       borderLeft: `3px solid ${color}`, borderRadius: '8px', padding: '14px 16px'
     }}>
-      <p style={{ fontSize: '0.7rem', fontWeight: 700, color, textTransform: 'uppercase',
-        letterSpacing: '0.08em', marginBottom: '8px' }}>
+      <p style={{
+        fontSize: '0.7rem', fontWeight: 700, color, textTransform: 'uppercase',
+        letterSpacing: '0.08em', marginBottom: '8px'
+      }}>
         {label}
       </p>
       <p style={{ fontSize: '0.88rem', color: 'var(--text-primary)', lineHeight: 1.7 }}>
@@ -46,20 +48,26 @@ function PrescriptionCard({ item, index }) {
         </p>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
           {item.dosage && (
-            <span style={{ fontSize: '0.73rem', padding: '2px 8px', borderRadius: '4px',
-              background: 'rgba(59,130,246,0.1)', color: '#93c5fd', border: '1px solid rgba(59,130,246,0.2)' }}>
+            <span style={{
+              fontSize: '0.73rem', padding: '2px 8px', borderRadius: '4px',
+              background: 'rgba(59,130,246,0.1)', color: '#93c5fd', border: '1px solid rgba(59,130,246,0.2)'
+            }}>
               {item.dosage}
             </span>
           )}
           {item.frequency && (
-            <span style={{ fontSize: '0.73rem', padding: '2px 8px', borderRadius: '4px',
-              background: 'rgba(6,182,212,0.1)', color: '#67e8f9', border: '1px solid rgba(6,182,212,0.2)' }}>
+            <span style={{
+              fontSize: '0.73rem', padding: '2px 8px', borderRadius: '4px',
+              background: 'rgba(6,182,212,0.1)', color: '#67e8f9', border: '1px solid rgba(6,182,212,0.2)'
+            }}>
               {item.frequency}
             </span>
           )}
           {item.duration && (
-            <span style={{ fontSize: '0.73rem', padding: '2px 8px', borderRadius: '4px',
-              background: 'rgba(168,85,247,0.1)', color: '#d8b4fe', border: '1px solid rgba(168,85,247,0.2)' }}>
+            <span style={{
+              fontSize: '0.73rem', padding: '2px 8px', borderRadius: '4px',
+              background: 'rgba(168,85,247,0.1)', color: '#d8b4fe', border: '1px solid rgba(168,85,247,0.2)'
+            }}>
               {item.duration}
             </span>
           )}
@@ -97,11 +105,11 @@ export default function ConsultationRoom() {
   }, [id]);
 
   // MediaRecorder-based recording (sends to Gemini via backend)
-  const [isRecording, setIsRecording]       = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
-  const [sttError, setSttError]             = useState('');
+  const [sttError, setSttError] = useState('');
   const mediaRecorderRef = useRef(null);
-  const chunksRef        = useRef([]);
+  const chunksRef = useRef([]);
 
   const toggleRecording = async () => {
     setSttError('');
@@ -293,13 +301,13 @@ export default function ConsultationRoom() {
                   border: isRecording
                     ? '1px solid rgba(239,68,68,0.4)'
                     : isTranscribing
-                    ? '1px solid rgba(251,191,36,0.4)'
-                    : '1px solid var(--border)',
+                      ? '1px solid rgba(251,191,36,0.4)'
+                      : '1px solid var(--border)',
                   background: isRecording
                     ? 'rgba(239,68,68,0.12)'
                     : isTranscribing
-                    ? 'rgba(251,191,36,0.1)'
-                    : 'rgba(255,255,255,0.04)',
+                      ? 'rgba(251,191,36,0.1)'
+                      : 'rgba(255,255,255,0.04)',
                   color: isRecording ? '#fca5a5' : isTranscribing ? '#fbbf24' : 'var(--text-secondary)',
                   fontSize: '0.75rem', fontWeight: 600, transition: 'all 0.2s', opacity: isTranscribing ? 0.8 : 1
                 }}
@@ -307,8 +315,8 @@ export default function ConsultationRoom() {
                 {isTranscribing
                   ? <><Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> Transcribing…</>
                   : isRecording
-                  ? <><MicOff size={13} /> Stop Recording <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#ef4444', animation: 'pulse 1s infinite', display: 'inline-block' }} /></>
-                  : <><Mic size={13} /> Use Microphone</>
+                    ? <><MicOff size={13} /> Stop Recording <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#ef4444', animation: 'pulse 1s infinite', display: 'inline-block' }} /></>
+                    : <><Mic size={13} /> Use Microphone</>
                 }
               </button>
             </div>
@@ -318,7 +326,7 @@ export default function ConsultationRoom() {
               className="input-base"
               value={dialogue}
               onChange={e => { setDialogue(e.target.value); setError(''); }}
-              placeholder={`Paste or type the consultation dialogue here.\n\nFormat:\nDoctor: [question/observation]\nPatient: [response]\n\nOr use the microphone to record in real-time.`}
+              placeholder={`Paste or type the consultation dialogue here.\n\nOr use the microphone to record in real-time.`}
               rows={12}
               style={{ resize: 'none', lineHeight: 1.7, fontSize: '0.85rem' }}
             />
@@ -410,10 +418,10 @@ export default function ConsultationRoom() {
 
             {notesGenerated ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <SOAPSection label="S — Subjective"  content={notes.subjective} color="#3b82f6" />
-                <SOAPSection label="O — Objective"   content={notes.objective}  color="#06b6d4" />
-                <SOAPSection label="A — Assessment"  content={notes.assessment} color="#a78bfa" />
-                <SOAPSection label="P — Plan"        content={notes.plan}       color="#22c55e" />
+                <SOAPSection label="S — Subjective" content={notes.subjective} color="#3b82f6" />
+                <SOAPSection label="O — Objective" content={notes.objective} color="#06b6d4" />
+                <SOAPSection label="A — Assessment" content={notes.assessment} color="#a78bfa" />
+                <SOAPSection label="P — Plan" content={notes.plan} color="#22c55e" />
               </div>
             ) : (
               <div style={{ textAlign: 'center', padding: '40px 20px' }}>
@@ -452,8 +460,10 @@ export default function ConsultationRoom() {
                     marginTop: '4px', padding: '12px 14px', borderRadius: '8px',
                     background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.15)'
                   }}>
-                    <p style={{ fontSize: '0.68rem', fontWeight: 700, color: '#fbbf24',
-                      textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px' }}>
+                    <p style={{
+                      fontSize: '0.68rem', fontWeight: 700, color: '#fbbf24',
+                      textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px'
+                    }}>
                       Advice & Follow-up
                     </p>
                     <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>

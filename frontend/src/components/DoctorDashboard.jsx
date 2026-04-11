@@ -8,9 +8,9 @@ import socket from '../services/socket';
 import { getQueue } from '../services/api';
 
 const STATUS_STYLES = {
-  WAITING:        { color: '#facc15', bg: 'rgba(250,204,21,0.1)',  label: 'Waiting' },
-  IN_CONSULTATION:{ color: '#06b6d4', bg: 'rgba(6,182,212,0.1)',   label: 'In Consult' },
-  COMPLETED:      { color: '#22c55e', bg: 'rgba(34,197,94,0.1)',   label: 'Completed' },
+  WAITING: { color: '#facc15', bg: 'rgba(250,204,21,0.1)', label: 'Waiting' },
+  IN_CONSULTATION: { color: '#06b6d4', bg: 'rgba(6,182,212,0.1)', label: 'In Consult' },
+  COMPLETED: { color: '#22c55e', bg: 'rgba(34,197,94,0.1)', label: 'Completed' },
 };
 
 function severityColor(score) {
@@ -230,9 +230,9 @@ export default function DoctorDashboard() {
     };
   }, [queue]);
 
-  const waiting       = queue.filter(p => p.status === 'WAITING').length;
-  const inConsultation= queue.filter(p => p.status === 'IN_CONSULTATION').length;
-  const avgSeverity   = queue.length
+  const waiting = queue.filter(p => p.status === 'WAITING').length;
+  const inConsultation = queue.filter(p => p.status === 'IN_CONSULTATION').length;
+  const avgSeverity = queue.length
     ? (queue.reduce((s, p) => s + p.severityScore, 0) / queue.length).toFixed(1)
     : '—';
   const criticalCount = queue.filter(p => p.severityScore >= 70).length;
@@ -263,11 +263,15 @@ export default function DoctorDashboard() {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px',
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '8px',
             padding: '6px 12px', background: 'var(--bg-card)', border: '1px solid var(--border)',
-            borderRadius: '8px', fontSize: '0.78rem' }}>
-            <div className="pulse-dot" style={{ background: isConnected ? '#22c55e' : '#ef4444',
-              boxShadow: isConnected ? undefined : 'none' }} />
+            borderRadius: '8px', fontSize: '0.78rem'
+          }}>
+            <div className="pulse-dot" style={{
+              background: isConnected ? '#22c55e' : '#ef4444',
+              boxShadow: isConnected ? undefined : 'none'
+            }} />
             <span style={{ color: isConnected ? '#4ade80' : '#f87171' }}>
               {isConnected ? 'Socket Connected' : 'Disconnected'}
             </span>
@@ -282,10 +286,10 @@ export default function DoctorDashboard() {
 
       {/* Stats Row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard icon={Users}       label="Waiting"        value={waiting}        accent="#3b82f6" />
-        <StatCard icon={Stethoscope} label="In Consult"     value={inConsultation} accent="#06b6d4" />
-        <StatCard icon={Activity}    label="Avg Severity"   value={avgSeverity}    accent="#eab308" />
-        <StatCard icon={AlertCircle} label="Critical (70+)"  value={criticalCount}  accent="#ef4444" />
+        <StatCard icon={Users} label="Waiting" value={waiting} accent="#3b82f6" />
+        <StatCard icon={Stethoscope} label="In Consult" value={inConsultation} accent="#06b6d4" />
+        <StatCard icon={Activity} label="Avg Severity" value={avgSeverity} accent="#eab308" />
+        <StatCard icon={AlertCircle} label="Critical (70+)" value={criticalCount} accent="#ef4444" />
       </div>
 
       {/* Algorithm Legend */}
@@ -338,7 +342,7 @@ export default function DoctorDashboard() {
             <span>Rank</span>
             <span>Patient</span>
             <span style={{ minWidth: '80px', textAlign: 'center' }}>Severity</span>
-            <span style={{ minWidth: '64px', textAlign: 'center' }}>Wait</span>
+            <span style={{ minWidth: '64px', textAlign: 'center' }}>Wait (T)</span>
             <span style={{ minWidth: '80px', textAlign: 'center' }}>Priority ↓</span>
             <span style={{ minWidth: '110px', textAlign: 'center' }}>Action</span>
           </div>
