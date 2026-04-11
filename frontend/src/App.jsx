@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, NavLink, useNavigate } from 'react-router-dom';
-import { Activity, LayoutDashboard, Stethoscope, Wifi, WifiOff } from 'lucide-react';
+// Add Sun and Moon to your lucide-react imports
+import { Activity, LayoutDashboard, Stethoscope, Wifi, WifiOff, Sun, Moon } from 'lucide-react'; 
 import socket from './services/socket';
 import PatientIntake from './components/PatientIntake';
 import DoctorDashboard from './components/DoctorDashboard';
@@ -8,6 +9,33 @@ import ConsultationRoom from './components/ConsultationRoom';
 
 function Layout({ children }) {
   const [connected, setConnected] = useState(socket.connected);
+  
+  // Theme State Setup
+  const [isDarkMode, setIsDarkMode] = useState(true);
+
+  // Read saved theme on load
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'light') {
+      setIsDarkMode(false);
+      document.body.classList.add('light-mode');
+    }
+  }, []);
+
+  // Toggle Function
+  const toggleTheme = () => {
+    setIsDarkMode((prev) => {
+      const newMode = !prev;
+      if (newMode) {
+        document.body.classList.remove('light-mode');
+        localStorage.setItem('theme', 'dark');
+      } else {
+        document.body.classList.add('light-mode');
+        localStorage.setItem('theme', 'light');
+      }
+      return newMode;
+    });
+  };
 
   useEffect(() => {
     const onConnect = () => setConnected(true);
@@ -25,18 +53,21 @@ function Layout({ children }) {
       {/* Top Nav */}
       <nav
         style={{
-          background: 'rgba(8,15,26,0.92)',
+          background: 'var(--nav-bg)', // Updated to use CSS variable
           borderBottom: '1px solid var(--border)',
           backdropFilter: 'blur(12px)',
           position: 'sticky',
           top: 0,
           zIndex: 50,
+          transition: 'background-color 0.3s ease, border-color 0.3s ease'
         }}
       >
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <div
+             {/* ... Keep your Logo code exactly the same ... */}
+             <div
               className="flex items-center justify-center w-9 h-9 rounded-lg"
               style={{ background: 'linear-gradient(135deg, #3b82f6, #06b6d4)' }}
             >
@@ -51,7 +82,7 @@ function Layout({ children }) {
                   letterSpacing: '0.01em',
                 }}
               >
-                PriorityQ
+                MediQ
               </span>
               <span
                 style={{
@@ -70,18 +101,20 @@ function Layout({ children }) {
 
           {/* Nav Links */}
           <div className="flex items-center gap-2">
-            <NavLink
+             {/* ... Keep your NavLinks exactly the same ... */}
+             <NavLink
               to="/"
               end
               className={({ isActive }) =>
-                `flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${isActive
-                  ? 'text-white'
-                  : 'text-gray-400 hover:text-gray-200'
+                `flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  isActive
+                    ? 'text-accent' // Swapped text-white for var usage if needed, but your inline styles handle active state
+                    : 'text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)]'
                 }`
               }
               style={({ isActive }) =>
                 isActive
-                  ? { background: 'rgba(59,130,246,0.18)', color: '#93c5fd' }
+                  ? { background: 'rgba(59,130,246,0.18)', color: '#3b82f6' }
                   : {}
               }
             >
@@ -92,14 +125,15 @@ function Layout({ children }) {
             <NavLink
               to="/dashboard"
               className={({ isActive }) =>
-                `flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${isActive
-                  ? 'text-white'
-                  : 'text-gray-400 hover:text-gray-200'
+                `flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  isActive
+                    ? 'text-accent'
+                    : 'text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)]'
                 }`
               }
               style={({ isActive }) =>
                 isActive
-                  ? { background: 'rgba(59,130,246,0.18)', color: '#93c5fd' }
+                  ? { background: 'rgba(59,130,246,0.18)', color: '#3b82f6' }
                   : {}
               }
             >
@@ -108,19 +142,32 @@ function Layout({ children }) {
             </NavLink>
           </div>
 
-          {/* Connection status */}
-          <div className="flex items-center gap-2">
-            {connected ? (
-              <>
-                <div className="pulse-dot" />
-                <span style={{ fontSize: '0.75rem', color: '#4ade80' }}>Live</span>
-              </>
-            ) : (
-              <>
-                <WifiOff size={14} style={{ color: '#ef4444' }} />
-                <span style={{ fontSize: '0.75rem', color: '#ef4444' }}>Offline</span>
-              </>
-            )}
+          {/* Connection status AND Theme Toggle */}
+          <div className="flex items-center gap-6">
+            
+            {/* Theme Toggle Button */}
+            <button 
+              onClick={toggleTheme}
+              className="p-2 rounded-lg transition-colors hover:bg-[color:var(--border)] text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)]"
+              aria-label="Toggle Dark Mode"
+            >
+              {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+
+            {/* Connection Status */}
+            <div className="flex items-center gap-2">
+              {connected ? (
+                <>
+                  <div className="pulse-dot" />
+                  <span style={{ fontSize: '0.75rem', color: '#4ade80' }}>Live</span>
+                </>
+              ) : (
+                <>
+                  <WifiOff size={14} style={{ color: '#ef4444' }} />
+                  <span style={{ fontSize: '0.75rem', color: '#ef4444' }}>Offline</span>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </nav>
@@ -132,6 +179,7 @@ function Layout({ children }) {
 }
 
 export default function App() {
+  // ... Keep App function exactly the same
   return (
     <BrowserRouter>
       <Layout>
