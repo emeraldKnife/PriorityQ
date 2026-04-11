@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, NavLink, useNavigate } from 'react-router-dom';
 // Add Sun and Moon to your lucide-react imports
-import { Activity, LayoutDashboard, Stethoscope, Wifi, WifiOff, Sun, Moon } from 'lucide-react'; 
+import { Activity, LayoutDashboard, Stethoscope, Wifi, WifiOff, Sun, Moon } from 'lucide-react';
 import socket from './services/socket';
 import PatientIntake from './components/PatientIntake';
 import DoctorDashboard from './components/DoctorDashboard';
@@ -9,7 +9,7 @@ import ConsultationRoom from './components/ConsultationRoom';
 
 function Layout({ children }) {
   const [connected, setConnected] = useState(socket.connected);
-  
+
   // Theme State Setup
   const [isDarkMode, setIsDarkMode] = useState(true);
 
@@ -63,11 +63,11 @@ function Layout({ children }) {
         }}
       >
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          
+
           {/* Logo */}
           <div className="flex items-center gap-3">
-             {/* ... Keep your Logo code exactly the same ... */}
-             <div
+            {/* ... Keep your Logo code exactly the same ... */}
+            <div
               className="flex items-center justify-center w-9 h-9 rounded-lg"
               style={{ background: 'linear-gradient(135deg, #3b82f6, #06b6d4)' }}
             >
@@ -82,7 +82,7 @@ function Layout({ children }) {
                   letterSpacing: '0.01em',
                 }}
               >
-                MediQ
+                PriorityQ
               </span>
               <span
                 style={{
@@ -101,15 +101,14 @@ function Layout({ children }) {
 
           {/* Nav Links */}
           <div className="flex items-center gap-2">
-             {/* ... Keep your NavLinks exactly the same ... */}
-             <NavLink
+            {/* ... Keep your NavLinks exactly the same ... */}
+            <NavLink
               to="/"
               end
               className={({ isActive }) =>
-                `flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  isActive
-                    ? 'text-accent' // Swapped text-white for var usage if needed, but your inline styles handle active state
-                    : 'text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)]'
+                `flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${isActive
+                  ? 'text-accent' // Swapped text-white for var usage if needed, but your inline styles handle active state
+                  : 'text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)]'
                 }`
               }
               style={({ isActive }) =>
@@ -125,10 +124,9 @@ function Layout({ children }) {
             <NavLink
               to="/dashboard"
               className={({ isActive }) =>
-                `flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  isActive
-                    ? 'text-accent'
-                    : 'text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)]'
+                `flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${isActive
+                  ? 'text-accent'
+                  : 'text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)]'
                 }`
               }
               style={({ isActive }) =>
@@ -144,9 +142,9 @@ function Layout({ children }) {
 
           {/* Connection status AND Theme Toggle */}
           <div className="flex items-center gap-6">
-            
+
             {/* Theme Toggle Button */}
-            <button 
+            <button
               onClick={toggleTheme}
               className="p-2 rounded-lg transition-colors hover:bg-[color:var(--border)] text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)]"
               aria-label="Toggle Dark Mode"

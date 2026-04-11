@@ -1,164 +1,215 @@
-# MediQ — AI-Powered OPD Intelligence Platform
+# PriorityQ — AI-Powered OPD Intelligence Platform
 
-A full-stack healthcare application featuring **smart AI triage**, a **dynamic priority queue with starvation prevention**, and **AI-powered clinical documentation**.
-
----
-
-## 🏗️ Architecture Overview
-
-```
-/opd-platform
-├── /backend          → Node.js + Express + Socket.io + MongoDB
-│   ├── server.js
-│   ├── /models       → Mongoose schemas
-│   ├── /controllers  → Business logic
-│   ├── /routes       → Express routes
-│   └── /services     → AI (OpenAI) abstraction layer
-└── /frontend         → React + Vite + Tailwind CSS
-    └── /src
-        ├── App.jsx
-        ├── /components
-        │   ├── PatientIntake.jsx      → Patient check-in + AI triage
-        │   ├── DoctorDashboard.jsx   → Live priority queue (WebSocket)
-        │   └── ConsultationRoom.jsx  → SOAP notes + prescription AI
-        └── /services
-            ├── socket.js             → Socket.io client
-            └── api.js                → Axios API calls
-```
+> An intelligent outpatient department management system that uses **Google Gemini AI** to triage patients, prioritize queues dynamically, and generate clinical documentation in real-time.
 
 ---
 
-## ⚡ Quick Start
+## Features
+
+### 🏥 AI-Powered Patient Triage
+- Patients describe symptoms via text or voice at check-in
+- Gemini Flash analyses the symptoms and assigns a **severity score (1–100)**
+- AI estimates the predicted consultation duration
+
+### 📊 Live Priority Queue
+- The doctor's dashboard shows a real-time queue sorted by **Priority Score**
+- **Priority Score formula:** `S + (T × 0.5)` — Severity + Waiting Time (minutes)
+- Implements an **aging algorithm** to prevent low-severity patients from waiting indefinitely
+- Queue updates automatically every 60 seconds and instantly via WebSocket on any new check-in
+
+### 🎙️ Voice-to-Text (Speech-to-Text)
+- Patients can dictate symptoms verbally instead of typing
+- Doctors can record consultations in real-time
+- Audio is captured via the browser's `MediaRecorder` API and transcribed by **Gemini AI** on the backend
+
+### 📋 AI Clinical Documentation (SOAP Notes)
+- After a consultation, the doctor pastes or records the doctor-patient dialogue
+- Gemini generates structured **SOAP notes** (Subjective, Objective, Assessment, Plan)
+- AI also drafts a **prescription** with medication name, dosage, frequency, and duration
+- A general advice and follow-up summary is also generated
+
+### 🔌 Real-Time Updates
+- **Socket.IO** pushes queue updates to all connected doctor dashboards simultaneously
+- A live connection indicator shows socket status
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| **Frontend** | React (Vite), Vanilla CSS, Lucide Icons, Socket.IO Client |
+| **Backend** | Node.js, Express.js |
+| **Database** | MongoDB (via Mongoose) |
+| **AI** | Google Gemini Flash (`@google/generative-ai`) |
+| **Real-time** | Socket.IO |
+| **Fonts** | DM Sans, DM Serif Display, JetBrains Mono |
+
+---
+
+## Project Structure
+
+```
+PriorityQ/
+├── backend/
+│   ├── controllers/
+│   │   ├── triageController.js      # Patient check-in & AI triage logic
+│   │   ├── queueController.js       # Priority score calculation & broadcast
+│   │   └── notesController.js       # SOAP note & prescription generation
+│   ├── models/
+│   │   └── PatientVisit.js          # Mongoose schema (severity, notes, prescription)
+│   ├── routes/
+│   │   └── api.js                   # All REST API endpoints + /transcribe
+│   ├── services/
+│   │   └── aiService.js             # Gemini AI: triage, SOAP notes, audio transcription
+│   ├── server.js                    # Express + Socket.IO + MongoDB connection
+│   ├── .env                         # Environment variables (API key, DB URI)
+│   └── package.json
+│
+└── frontend/
+    ├── src/
+    │   ├── components/
+    │   │   ├── PatientIntake.jsx     # Check-in form with voice input
+    │   │   ├── DoctorDashboard.jsx  # Live priority queue for doctors
+    │   │   └── ConsultationRoom.jsx # Dialogue input, SOAP notes, prescription
+    │   ├── services/
+    │   │   ├── api.js               # Axios API helpers
+    │   │   └── socket.js            # Socket.IO client singleton
+    │   ├── App.jsx                  # Router + layout + nav
+    │   └── index.css                # Design system (glassmorphism, tokens)
+    └── index.html
+```
+
+---
+
+## Getting Started
 
 ### Prerequisites
-- Node.js v18+
-- MongoDB running locally (`mongod`) OR a MongoDB Atlas URI
-- (Optional) OpenAI API key — the app runs in **Demo Mode** without one
+- **Node.js** v18+
+- **MongoDB** (running locally on `mongodb://localhost:27017`)
+- A **Google Gemini API key** from [Google AI Studio](https://aistudio.google.com/app/apikey)
+
+> ⚠️ **Important:** Create your API key by clicking **"Create API key in new project"** in AI Studio. Do not use an existing Google Cloud project — it may have billing restrictions that block the free tier.
 
 ---
 
-### 1. Backend Setup
+### 1. Clone & Install
 
 ```bash
+# Install backend dependencies
 cd backend
+npm install
+
+# Install frontend dependencies
+cd ../frontend
 npm install
 ```
 
-Edit `.env`:
+### 2. Configure Environment
+
+Create / update `backend/.env`:
+
 ```env
 PORT=5000
 FRONTEND_URL=http://localhost:5173
+
 MONGO_URI=mongodb://localhost:27017/opd_platform
-OPENAI_API_KEY=your_openai_api_key_here   # Leave as-is for Demo Mode
-AI_MODEL=gpt-4o-mini
+
+GEMINI_API_KEY=your_api_key_here
+AI_MODEL=gemini-2.0-flash
 ```
 
-Start the server:
-```bash
-npm run dev    # with nodemon (auto-reload)
-# OR
-npm start      # production
+### 3. Start MongoDB
+
+Make sure your local MongoDB service is running:
+
+```powershell
+# Windows (run as Administrator)
+net start MongoDB
 ```
 
----
+### 4. Run the Application
 
-### 2. Frontend Setup
+Open **two terminals**:
 
 ```bash
+# Terminal 1 — Backend
+cd backend
+npm run dev
+
+# Terminal 2 — Frontend
 cd frontend
-npm install
 npm run dev
 ```
 
-Open **http://localhost:5173**
+- **Frontend:** http://localhost:5173
+- **Backend API:** http://localhost:5000
 
 ---
 
-## 🤖 AI Modes
+## How to Use
 
-### Demo Mode (no API key required)
-If `OPENAI_API_KEY` is not set, the app uses smart keyword-based mock responses:
-- Triage AI: Detects severity from keywords (chest pain → 9/10, cold → 3/10)
-- Clinical AI: Returns realistic SOAP notes and a sample prescription
+### Patient Check-In (Patient Intake page)
+1. Enter the patient's **name** and **age**
+2. Describe symptoms by **typing** or clicking **"Speak"** to use voice
+3. Click **"Check In & Assess"**
+4. The AI returns a **severity score (1–100)**, a label (e.g., *Moderate*), and an estimated consultation time
 
-### Live Mode (with OpenAI key)
-Set `OPENAI_API_KEY` in `.env` and the AI uses `gpt-4o-mini` for real responses.
+### Doctor's Queue (Doctor Dashboard)
+1. See all waiting patients sorted by **Priority Score** (highest first)
+2. The `#1` patient is highlighted as **"Next"**
+3. The queue auto-refreshes every 60 seconds; new check-ins trigger an instant update via Socket.IO
+4. Click **"Consult"** to open the consultation room for any patient
+
+### Consultation Room
+1. Type or **record** the doctor-patient dialogue
+2. Click **"Generate Clinical Notes & Prescription"**
+3. The AI produces structured **SOAP notes** and a **draft prescription**
+4. Click **"Complete & Discharge"** when done — the patient's status updates to `COMPLETED`
 
 ---
 
-## 🧮 Priority Queue Algorithm
+## Priority Algorithm
 
 ```
-PriorityScore = (Severity × Ws) + (MinutesWaiting × Wt)
-
-Where:
-  Severity       = AI-assigned score (1–10)
-  MinutesWaiting = Time since check-in
-  Ws = 10        (severity weight)
-  Wt = 0.5       (time weight)
+Priority Score = Severity Score + (Minutes Waiting × 0.5)
 ```
 
-**Starvation Prevention**: A patient with severity 2 who has waited 60 minutes gets:
-`Priority = (2×10) + (60×0.5) = 50` — outranking a new severity 4 patient at `(4×10) + (0×0.5) = 40`
+| Term | Description |
+|---|---|
+| **S** | AI-assigned severity (1–100). A crushing chest pain might score 92, a mild cold ~15 |
+| **T** | Minutes the patient has been waiting since check-in |
+| **× 0.5** | Aging weight — ensures low-severity patients still rise over time (starvation prevention) |
 
-The queue recalculates and **broadcasts via WebSocket every 60 seconds** automatically.
-
----
-
-## 📡 API Endpoints
-
-| Method | Endpoint                       | Description                    |
-|--------|--------------------------------|--------------------------------|
-| GET    | `/api/health`                  | Health check                   |
-| GET    | `/api/queue`                   | Get live priority queue        |
-| POST   | `/api/patients/checkin`        | Check in patient + AI triage   |
-| GET    | `/api/patients`                | Get all active patients        |
-| GET    | `/api/patients/:id`            | Get patient by ID              |
-| PUT    | `/api/patients/:id/status`     | Update status                  |
-| POST   | `/api/patients/:id/notes`      | Generate AI clinical notes     |
-| PUT    | `/api/patients/:id/complete`   | Complete consultation          |
+**Example:** A patient with severity 25 who has waited 40 minutes has a score of `25 + 20 = 45`, outranking a new patient with severity 40 who scores `40 + 0 = 40`.
 
 ---
 
-## 🔌 WebSocket Events
+## API Reference
 
-| Event          | Direction         | Payload                         |
-|----------------|-------------------|---------------------------------|
-| `queue:update` | Server → Clients  | Sorted array of patient objects |
-
----
-
-## 🎯 Features
-
-- **Patient Intake**: Form with AI severity scoring (1–10) and consult time estimate
-- **Live Queue**: Real-time WebSocket dashboard — priority scores visibly change as wait time increases
-- **Consultation Room**: Paste or speak dialogue → AI generates SOAP notes + prescription
-- **Speech-to-Text**: Web Speech API integration (Chrome recommended)
-- **Demo Mode**: Works offline/without API key using smart mock AI
-- **Dark UI**: Professional medical interface with DM Serif Display + DM Sans fonts
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/health` | Health check |
+| `POST` | `/api/patients/checkin` | Check in a patient + run AI triage |
+| `GET` | `/api/patients` | List all patients |
+| `GET` | `/api/patients/:id` | Get patient details |
+| `PUT` | `/api/patients/:id/status` | Update patient status |
+| `GET` | `/api/queue` | Get current sorted queue |
+| `POST` | `/api/patients/:id/notes` | Generate SOAP notes + prescription |
+| `PUT` | `/api/patients/:id/complete` | Mark patient as discharged |
+| `POST` | `/api/transcribe` | Transcribe audio blob via Gemini |
 
 ---
 
-## 🗂️ MongoDB Schema (PatientVisit)
+## Known Limitations
 
-```js
-{
-  patientName:            String (required)
-  age:                    Number
-  rawSymptoms:            String (required)
-  severityScore:          Number (1–10)
-  predictedConsultTimeMins: Number
-  status:                 'WAITING' | 'IN_CONSULTATION' | 'COMPLETED'
-  checkInTime:            Date
-  notes: {
-    subjective, objective, assessment, plan  // SOAP
-  }
-  prescription:           [{ medication, dosage, frequency, duration }]
-  rawDialogue:            String
-  diagnosis:              String
-  advice:                 String
-  // Virtuals (computed):
-  minutesWaiting:         Number
-  priorityScore:          Number
-}
-```
+- **Voice transcription** requires a working Gemini API key (free tier: ~50 req/day)
+- The **Web Speech API** fallback is not used — all STT goes through Gemini on the backend
+- **Browser support:** `MediaRecorder` works in Chrome, Edge, and Firefox
+- MongoDB must be running locally; there is no cloud DB fallback
+
+---
+
+## License
+
+MIT — feel free to use, modify, and distribute.
