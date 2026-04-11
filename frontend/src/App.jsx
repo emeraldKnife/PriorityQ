@@ -51,7 +51,7 @@ function Layout({ children }) {
                   letterSpacing: '0.01em',
                 }}
               >
-                MediQ
+                PriorityQ
               </span>
               <span
                 style={{
@@ -74,10 +74,9 @@ function Layout({ children }) {
               to="/"
               end
               className={({ isActive }) =>
-                `flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  isActive
-                    ? 'text-white'
-                    : 'text-gray-400 hover:text-gray-200'
+                `flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${isActive
+                  ? 'text-white'
+                  : 'text-gray-400 hover:text-gray-200'
                 }`
               }
               style={({ isActive }) =>
@@ -93,10 +92,9 @@ function Layout({ children }) {
             <NavLink
               to="/dashboard"
               className={({ isActive }) =>
-                `flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  isActive
-                    ? 'text-white'
-                    : 'text-gray-400 hover:text-gray-200'
+                `flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${isActive
+                  ? 'text-white'
+                  : 'text-gray-400 hover:text-gray-200'
                 }`
               }
               style={({ isActive }) =>

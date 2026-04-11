@@ -58,6 +58,7 @@ The JSON must have exactly two keys:
   return safeParseJSON(raw);
 }
 
+// nigga this function is timepass
 function getMockTriageResult(symptoms) {
   const lower = symptoms.toLowerCase();
   let severity = 30;

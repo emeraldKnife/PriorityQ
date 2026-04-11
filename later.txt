@@ -1,4 +1,3 @@
-- change the 1 to 10 severity_score (backend/services/aiService.js)
 - see the API calls (backend/routes/aiRoutes.js)
 - add the workflow screenshoot in the `README.md` file
 - change the name of the project to PrioirityQ
@@ -7,3 +6,4 @@
 - include the speech to text thing completly
 - ⏱️ Queue heartbeat: recalculating priority scores...
   resolve this error
+- change frontend style, if possible
